@@ -1,45 +1,25 @@
 var http = require('http');
+var router = require('./router');
 var url = require('url');
-var fs = require('fs');
+var requestHandler = require('./requestHandler');
+var handler = {}
+handler["/"] = requestHandler.index;
+handler["/empresa"] = requestHandler.empresa;
+handler["/contacto"] = requestHandler.contacto;
 
-var PORT = 8888;
-
-http.createServer(onRequest).listen(PORT);
-
-console.log("Server listening at port: " + PORT);
+http.createServer(onRequest).listen(8888);
 
 function onRequest(req, res){
-	var html = "";
-	var path = req.url.substring(1, req.url.length);
+	var postData;
+	var path = url.parse(req.url).pathname;
 
-	if(path != ""){
-		var fileExtension = req.url.substring(path.lastIndexOf('.') + 2, req.url.length);
+	req.addListener("data", function(trozoPosteado) {
+		postData += trozoPosteado;
+	});
 
-		console.log("Requested path: " + path); // BORRAR
-		console.log("Requested file extension: " + fileExtension); // BORRAR
-
-		if(fileExtension == "html")
-			res.writeHead(200, {"Content-Type": "text/html"});
-		else if(fileExtension == "css")
-			res.writeHead(200, {"Content-Type": "text/css"});
-
-		switch(path){
-			case "":
-			fs.readFile(path, function read(err, data) {
-				if (err) {
-					throw err;
-				}
-				res.write(data);
-				res.end();
-
-			});
-			break;
-
-			default:
-				res.writeHead(404, 'text/html');
-				res.write("ups... page not found");
-				res.end();
-				break;
-		}
-	}
+	req.addListener("end", function() {
+		console.log("path: " + path);
+		console.log("postData: " + postData);
+		router.route(handler, path, res, postData);
+	});
 }
